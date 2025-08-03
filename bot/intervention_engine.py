@@ -28,7 +28,7 @@ class InterventionEngine:
         start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         last_escalation TIMESTAMP,
         response_received BOOLEAN DEFAULT FALSE,
-        resolution_status TEXT, -- active, resolved, escalated
+        resolution_status TEXT DEFAULT 'active', -- active, resolved, escalated
         effectiveness_score REAL
         )
         ''')
@@ -225,6 +225,93 @@ class InterventionEngine:
         
         conn.commit()
         conn.close()
+    
+    def comprehensive_intervention_check(self, user_id: int):
+        """Run comprehensive intervention analysis"""
+        interventions_needed = {}
+        
+        # Check all trigger conditions
+        missed_deadlines = self.monitor_commitment_deadlines(user_id)
+        declining_patterns = self.detect_pattern_decline(user_id)
+        cascade_failures = self.check_cross_domain_cascade(user_id)
+        
+        # Determine interventions needed
+        all_domains = ['business', 'health', 'finance', 'parenting', 'work', 'personal']
+        
+        for domain in all_domains:
+            intervention_level = self.get_intervention_level(user_id, domain)
+            
+            if intervention_level > 0:
+                interventions_needed[domain] = {
+                    'level': intervention_level,
+                    'triggers': self.get_domain_triggers(user_id, domain),
+                    'intervention_id': self.deploy_intervention(user_id, domain, intervention_level, {})
+                }
+        
+        return interventions_needed
+    
+    def check_cross_domain_cascade(self, user_id: int):
+        """Detect when failure in one domain is affecting others"""
+        patterns = self.pattern_analyzer.analyze_user_patterns(user_id, 7)
+        cross_effects = patterns.get('cross_domain_effects', {})
+        
+        cascading_failures = []
+        
+        for effect_key, data in cross_effects.items():
+            if data['strength'] > 0.6 and data.get('success_correlation', 0) < 0.3:
+                # High correlation but low success rate = cascade failure
+                if '_affects_' in effect_key:
+                    source_domain, target_domain = effect_key.split('_affects_')
+                    
+                    cascading_failures.append({
+                        'source_domain': source_domain,
+                        'target_domain': target_domain,
+                        'cascade_strength': data['strength']
+                    })
+                    
+                    self.log_trigger(user_id, 'cascade_failure', target_domain, {
+                        'source_domain': source_domain,
+                        'cascade_strength': data['strength']
+                    }, data['strength'])
+        
+        return cascading_failures
+    
+    def get_domain_triggers(self, user_id: int, domain: str):
+        """Get recent triggers for specific domain"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+        SELECT trigger_type, trigger_data, severity_score, timestamp
+        FROM intervention_triggers
+        WHERE user_id = ? AND domain = ?
+        AND timestamp > datetime('now', '-48 hours')
+        ORDER BY timestamp DESC
+        ''', (user_id, domain))
+        
+        triggers = cursor.fetchall()
+        conn.close()
+        
+        return [{'type': t[0], 'data': json.loads(t[1]), 'severity': t[2], 'time': t[3]}
+                for t in triggers]
+    
+    def deploy_intervention(self, user_id: int, domain: str, intervention_level: int, trigger_data: dict):
+        """Deploy intervention and track it"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Record active intervention
+        cursor.execute('''
+        INSERT INTO active_interventions
+        (user_id, domain, intervention_level, trigger_condition)
+        VALUES (?, ?, ?, ?)
+        ''', (user_id, domain, intervention_level, json.dumps(trigger_data)))
+        
+        intervention_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        
+        return intervention_id
 
 if __name__ == "__main__":
     engine = InterventionEngine()
