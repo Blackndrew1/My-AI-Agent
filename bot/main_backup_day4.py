@@ -29,22 +29,21 @@ class EnhancedLifeAgent:
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_name = update.effective_user.first_name
         message = f"""
-🧠 **Enhanced Life Agent - Day 4**
+🧠 **Enhanced Life Agent**
 
-Hello {user_name}! NEW PATTERN INTELLIGENCE:
-- Behavioral pattern recognition
-- Success prediction algorithms
-- Adaptive prompting based on your data
-- Cross-domain correlation analysis
+Hello {user_name}! NEW FEATURES:
+- Multi-turn conversations
+- Pattern recognition  
+- Success prediction
 
-**Available Commands:**
+**Commands:**
 /business - Intelligent business conversation
-/patterns - Your behavioral analysis
+/patterns - Behavioral analysis
 /insights - Cross-domain correlations
 /forecast - Success predictions
-/checkin - Daily check-in
+/checkin - Original daily check-in
 
-Type /business to test pattern-based coaching!
+Type /business to test enhanced intelligence!
 """
         await update.message.reply_text(message, parse_mode='Markdown')
     
@@ -58,7 +57,7 @@ Type /business to test pattern-based coaching!
         await update.message.reply_text(f"🎯 **Business Agent**\n\n{prompt}", parse_mode='Markdown')
     
     async def patterns_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Show detailed pattern analysis"""
+        """Show behavioral pattern analysis"""
         user_id = update.effective_user.id
         user_name = update.effective_user.first_name
         
@@ -66,7 +65,6 @@ Type /business to test pattern-based coaching!
         analyzer = PatternAnalyzer()
         patterns = analyzer.analyze_user_patterns(user_id, 30)
         
-        # Format completion patterns
         completion_data = patterns.get('completion_patterns', {}).get('by_domain', {})
         if completion_data:
             completion_text = "\n".join([
@@ -74,24 +72,22 @@ Type /business to test pattern-based coaching!
                 for domain, data in completion_data.items()
             ])
         else:
-            completion_text = "No completion data yet - use system for a few days"
+            completion_text = "No pattern data yet - use system for a few days"
         
-        # Format avoidance patterns
         avoidance_data = patterns.get('avoidance_patterns', {})
         avoidance_rate = avoidance_data.get('total_avoidance_rate', 0)
         
         message = f"""
-📊 **{user_name}'s Behavioral Pattern Analysis**
+📊 **{user_name}'s Pattern Analysis**
 
-**📈 COMPLETION RATES (30 days):**
+**📈 COMPLETION RATES:**
 {completion_text}
 
 **⚠️ AVOIDANCE RATE:** {avoidance_rate:.0%}
 
-**🎯 CROSS-DOMAIN INSIGHTS:**
-{len(patterns.get('cross_domain_effects', {}))} significant correlations detected
+**🔗 CORRELATIONS:** {len(patterns.get('cross_domain_effects', {}))} detected
 
-Type /insights for detailed predictive analysis.
+Use /insights for detailed analysis.
 """
         
         await update.message.reply_text(message, parse_mode='Markdown')
@@ -113,7 +109,7 @@ Type /insights for detailed predictive analysis.
                 strength = data['strength']
                 insights_text += f"• **{source.title()} → {target.title()}:** {strength:.0%} correlation\n"
         else:
-            insights_text = "Continue using system to unlock cross-domain insights.\n\nNeed 5+ days of data across multiple domains for meaningful correlations."
+            insights_text = "Continue using system to unlock cross-domain insights."
         
         await update.message.reply_text(insights_text, parse_mode='Markdown')
     
@@ -121,64 +117,25 @@ Type /insights for detailed predictive analysis.
         """Show daily success forecast"""
         user_id = update.effective_user.id
         
-        from pattern_analyzer import PatternAnalyzer
-        analyzer = PatternAnalyzer()
-        patterns = analyzer.analyze_user_patterns(user_id, 7)
+        patterns = self.conversation_manager.get_recent_patterns(user_id, 'business', 7)
         
-        completion_data = patterns.get('completion_patterns', {}).get('by_domain', {})
-        
-        if completion_data:
-            forecast_text = "**🔮 SUCCESS PREDICTIONS:**\n\n"
-            for domain, data in completion_data.items():
-                rate = data['completion_rate']
-                trend = data['trend']
-                
-                if rate > 0.7:
-                    emoji = "✅"
-                    status = "High Success"
-                elif rate > 0.4:
-                    emoji = "⚠️"
-                    status = "Medium Risk"
-                else:
-                    emoji = "🚨"
-                    status = "High Risk"
-                
-                forecast_text += f"{emoji} **{domain.title()}:** {rate:.0%} - {status} ({trend})\n"
+        if patterns:
+            completion_rate = sum(1 for p in patterns if p[2]) / len(patterns)
+            if completion_rate > 0.7:
+                forecast = f"✅ **High Success:** {completion_rate:.0%}"
+            elif completion_rate > 0.4:
+                forecast = f"⚠️ **Medium Risk:** {completion_rate:.0%}"
+            else:
+                forecast = f"🚨 **High Risk:** {completion_rate:.0%}"
         else:
-            forecast_text = "📊 **No Data:** Use system for a few days to enable predictions"
+            forecast = "📊 **No Data:** Use system for predictions"
         
         message = f"""
-🔮 **Daily Success Forecast**
+🔮 **Daily Forecast**
 
-{forecast_text}
+**Business:** {forecast}
 
-Type /business for pattern-based coaching.
-"""
-        
-        await update.message.reply_text(message, parse_mode='Markdown')
-    
-    async def checkin_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Original checkin command for compatibility"""
-        user_id = update.effective_user.id
-        user_name = update.effective_user.first_name
-        
-        self.db.add_user(user_id, update.effective_user.username, user_name)
-        
-        message = f"""
-🎯 **Daily Life Domain Check-In**
-
-{user_name}, time for accountability across all domains:
-
-**Answer each domain with ONE specific commitment:**
-
-1️⃣ **Business**: What's your ONE business action today?
-2️⃣ **Health**: Morning workout plan? (gym/home/outdoor)
-3️⃣ **Finance**: Any spending plans or money goals?
-4️⃣ **Parenting**: Quality time plan with your son?
-5️⃣ **Work**: What task will you automate today?
-6️⃣ **Personal**: How will you recharge tonight?
-
-Type your commitments and I'll track them!
+Use /business for coaching.
 """
         
         await update.message.reply_text(message, parse_mode='Markdown')
@@ -192,39 +149,21 @@ Type your commitments and I'll track them!
             response = agents['business'].process_user_response(update.message.text)
             await update.message.reply_text(response, parse_mode='Markdown')
         else:
-            # Simple intelligent responses for general messages
-            user_message = update.message.text.lower()
-            user_name = update.effective_user.first_name
-            
-            if "pattern" in user_message or "analysis" in user_message:
-                await update.message.reply_text("📊 Type /patterns to see your behavioral analysis!")
-            elif "business" in user_message:
-                await update.message.reply_text("🎯 Type /business for intelligent business coaching!")
-            elif "help" in user_message:
-                await update.message.reply_text("Try /start to see all available commands!")
-            else:
-                await update.message.reply_text(f"Hi {user_name}! Type /business for intelligent conversation or /patterns to see your behavioral data.")
+            await update.message.reply_text("Type /business for intelligent conversation or /start for help")
 
 def main():
     token = os.getenv('TELEGRAM_BOT_TOKEN')
-    
-    if not token:
-        print("ERROR: TELEGRAM_BOT_TOKEN not found in .env file")
-        return
-    
     agent = EnhancedLifeAgent()
     app = Application.builder().token(token).build()
     
-    # Add all command handlers
     app.add_handler(CommandHandler("start", agent.start_command))
     app.add_handler(CommandHandler("business", agent.business_conversation))
     app.add_handler(CommandHandler("patterns", agent.patterns_command))
     app.add_handler(CommandHandler("insights", agent.insights_command))
     app.add_handler(CommandHandler("forecast", agent.forecast_command))
-    app.add_handler(CommandHandler("checkin", agent.checkin_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, agent.handle_message))
     
-    print("🧠 Enhanced Life Agent with Pattern Intelligence starting...")
+    print("🧠 Enhanced Life Agent starting...")
     app.run_polling()
 
 if __name__ == '__main__':

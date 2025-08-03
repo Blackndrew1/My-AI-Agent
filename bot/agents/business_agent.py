@@ -2,159 +2,136 @@ from .base_agent import BaseAgent
 import random
 
 class BusinessAgent(BaseAgent):
-    def __init__(self, user_id: int):
-        super().__init__("business", user_id)
+    def __init__(self, user_id, conversation_manager):
+        super().__init__("business", user_id, conversation_manager)
     
-    def get_personality_traits(self) -> dict:
+    def get_personality_traits(self):
         return {
             "tone": "direct_and_challenging",
-            "focus": "revenue_generating_actions", 
+            "focus": "revenue_generating_actions",
             "accountability_level": "firm",
             "motivation_style": "results_oriented"
         }
     
-    def generate_daily_prompt(self) -> str:
-        prompts = [
-            "What's your ONE business action today that directly advances your consultant/agency goals?",
-            "Name the specific client outreach or content creation task you'll complete today.",
-            "What business-building action are you most likely to avoid today? Do it first.",
-            "Which consultant skill will you demonstrate or improve today?",
-            "What specific step moves you closer to your first AI automation client?"
-        ]
-        return random.choice(prompts)
+    def generate_daily_prompt(self):
+        """Use pattern-based prompting"""
+        return self.get_pattern_based_prompt()
     
-    def analyze_response(self, user_response: str) -> str:
+    def generate_crisis_prompt(self, avoidance_data):
+        """Crisis intervention based on avoidance patterns"""
+        avoidance_rate = avoidance_data.get('total_avoidance_rate', 0)
+        
+        return f"""
+🚨 **BUSINESS CRISIS ALERT**
+
+**Pattern Recognition:** You've failed business commitments {avoidance_rate:.0%} of the time recently.
+
+**Reality Check:** At this avoidance rate, you'll still be in customer support in 2 years.
+
+**The Uncomfortable Truth:** What specific business action are you most afraid to do? That's exactly what you must do TODAY.
+
+**Override Question:** What's the ONE client-facing action that makes you uncomfortable but would directly advance your consultant goals?
+"""
+    
+    def generate_intervention_prompt(self):
+        """Intervention for declining trend"""
+        insights = self.get_predictive_insights()
+        insight_text = "\n".join(insights) if insights else ""
+        
+        return f"""
+⚠️ **BUSINESS MOMENTUM DECLINING**
+
+**Pattern Alert:** Your business action consistency is dropping. This is the critical intervention moment.
+
+**Predictive Analysis:**
+{insight_text}
+
+**Course Correction:** What business action will you commit to RIGHT NOW to reverse this trend?
+"""
+    
+    def generate_momentum_prompt(self):
+        """Capitalize on positive momentum"""
+        insights = self.get_predictive_insights()
+        insight_text = "\n".join(insights) if insights else ""
+        
+        return f"""
+🚀 **BUSINESS MOMENTUM BUILDING**
+
+**Pattern Recognition:** You're on an upward trend. Time to capitalize.
+
+**Success Analysis:**
+{insight_text}
+
+**Momentum Question:** What bigger business challenge will you tackle today while your execution momentum is strong?
+"""
+    
+    def analyze_response(self, user_response, conversation_context=None):
+        """Enhanced analysis with success prediction"""
         response = user_response.lower()
         
-        # Check for vague language
-        if any(word in response for word in ["maybe", "try to", "hope", "think about"]):
-            return "❌ **Too vague.** 'Maybe' and 'try' are failure words. Give me a specific, measurable action."
+        # Check for specificity
+        if any(word in response for word in ["maybe", "try to", "hope", "think about", "probably"]):
+            return "❌ **Vague commitment detected.** 'Maybe' and 'try' are failure words. I need a specific, measurable action with a timeline."
+        
+        # Check for avoidance disguised as learning
+        if any(word in response for word in ["research", "learn", "study", "read", "course"]):
+            return "⚠️ **Learning procrastination alert.** Research without action is sophisticated avoidance. What ACTION follows this learning TODAY?"
         
         # Check for revenue focus
-        if any(word in response for word in ["client", "customer", "proposal", "outreach", "content"]):
-            return "✅ **Revenue-focused action identified.** Time blocked for this? What's your accountability check?"
+        if any(word in response for word in ["client", "customer", "proposal", "outreach", "networking", "content"]):
+            return "✅ **Revenue-generating action identified.** This directly advances your consultant goals."
         
-        # Check for disguised procrastination
-        if any(word in response for word in ["research", "learn", "study", "read"]):
-            return "⚠️ **Learning or research?** That's often disguised procrastination. What ACTION follows this learning?"
+        # Check for business building vs. maintenance
+        if any(word in response for word in ["organize", "plan", "setup", "prepare"]):
+            return "📋 **Preparation task noted.** Preparation is valuable, but what CLIENT-FACING action follows this prep work?"
         
-        return f"**Business commitment logged:** {user_response}\n\nWhat specific obstacle will try to stop you, and how will you override it?"
+        return f"**Business commitment analyzed:** {user_response}"
     
-    def get_intervention_message(self, pattern_data: dict) -> str:
-        return """
-🚨 **Business Discipline Alert**
-
-You're in your typical business avoidance pattern. I see it clearly:
-
-**Pattern:** You commit to business actions but avoid the uncomfortable ones (cold outreach, direct sales, putting yourself out there).
-
-**Reality Check:** Your consultant/agency won't build itself. Every day you avoid direct business action, you stay in customer support instead of building your future.
-
-**Override Command:** Name ONE uncomfortable business action you'll complete in the next 2 hours. Not tomorrow. Not later. Now.
-
-This is your success or failure moment. Choose.
-"""
-
-
-class HealthAgent(BaseAgent):
-    def __init__(self, user_id: int):
-        super().__init__("health", user_id)
-    
-    def get_personality_traits(self) -> dict:
-        return {
-            "tone": "energy_focused",
-            "focus": "performance_optimization",
-            "accountability_level": "firm_but_supportive", 
-            "motivation_style": "performance_correlation"
-        }
-    
-    def generate_daily_prompt(self) -> str:
-        prompts = [
-            "Morning workout plan: Gym, home routine, or outdoor activity? Your energy depends on this choice.",
-            "What physical activity will optimize your business performance today?",
-            "How will you and your son stay active together today? (Gym session after Aug 11?)",
-            "Your body fuels your mind. What's the fitness commitment that ensures peak performance?",
-            "Rate your energy 1-10. What physical action raises that number today?"
-        ]
-        return random.choice(prompts)
-    
-    def analyze_response(self, user_response: str) -> str:
+    def generate_follow_up(self, user_response, analysis_result):
+        """Generate intelligent follow-up questions"""
         response = user_response.lower()
         
-        if any(word in response for word in ["skip", "rest day", "too tired", "later"]):
-            return "❌ **Energy excuses detected.** Low energy is often caused by skipping exercise, not fixed by avoiding it. 10-minute walk minimum?"
+        # If commitment is too vague, demand specificity
+        if "vague commitment" in analysis_result:
+            return "**Follow-up required:** Give me the specific action, the exact time you'll do it, and how you'll measure completion. No escape words."
         
-        if any(word in response for word in ["gym", "workout", "run", "basketball", "son"]):
-            return "✅ **Energy investment confirmed.** This typically correlates with 40% better business performance. Track that connection."
+        # If it's learning/research, demand the action component
+        if "learning procrastination" in analysis_result:
+            return "**Follow-up required:** After you complete this learning, what SPECIFIC action will you take with that knowledge today? Client call? Content creation? Outreach message?"
         
-        if "morning" in response:
-            return "🎯 **Morning routine locked in.** Early physical activity = sustained energy all day. What time specifically?"
+        # If it's preparation, ensure there's client-facing follow-through
+        if "preparation task" in analysis_result:
+            return "**Follow-up required:** Preparation is step 1. What's step 2 that involves actual client interaction or market visibility?"
         
-        return f"**Health commitment logged:** {user_response}\n\nHow will this affect your business energy and focus today?"
+        # If commitment is strong, check for obstacles
+        if "revenue-generating action" in analysis_result:
+            success_probability = self.predict_commitment_success(user_response)
+            return f"**Strong commitment confirmed.** Success prediction: {success_probability:.0%}. What's the most likely obstacle that will try to stop you today?"
+        
+        # No follow-up needed
+        return None
     
-    def get_intervention_message(self, pattern_data: dict) -> str:
-        return """
-⚡ **Energy Performance Alert**
+    def get_intervention_message(self, pattern_data):
+        """Generate intervention based on patterns"""
+        patterns = self.pattern_analyzer.analyze_user_patterns(self.user_id, 14)
+        domain_patterns = patterns.get('completion_patterns', {}).get('by_domain', {})
+        
+        if self.domain in domain_patterns:
+            completion_rate = domain_patterns[self.domain]['completion_rate']
+            
+            if completion_rate < 0.3:
+                return """
+🚨 **BUSINESS CRISIS INTERVENTION**
 
-**Data Pattern:** Your business productivity drops 60% on days you skip morning movement.
+**Brutal Reality:** You've avoided business actions 70%+ of the time. At this pace, you'll still be in customer support in 2 years.
 
-**Current Status:** You're entering a low-energy spiral that typically lasts 3-5 days and kills business momentum.
+**Pattern Recognition:** You consistently avoid client-facing actions. Every avoidance keeps you exactly where you are.
 
-**Intervention:** 15-minute movement NOW. Walk, pushups, stretching - anything that changes your physical state.
+**Reality Check:** Your consultant business requires doing things that make you uncomfortable. There's no comfortable path to business success.
 
-**Truth:** You can't build a successful business from a declining physical foundation. Your energy IS your business advantage.
+**Non-Negotiable Action:** Name the ONE business action you're most afraid to do. You have 2 hours to complete it.
 
-Move your body in the next 10 minutes or accept mediocre business results today.
+No "maybe" or "I'll try." Give me the specific action and exact timeline.
 """
-
-
-class FinanceAgent(BaseAgent):
-    def __init__(self, user_id: int):
-        super().__init__("finance", user_id)
-    
-    def get_personality_traits(self) -> dict:
-        return {
-            "tone": "analytical_and_direct",
-            "focus": "business_investment_mindset",
-            "accountability_level": "sharp",
-            "motivation_style": "wealth_building"
-        }
-    
-    def generate_daily_prompt(self) -> str:
-        prompts = [
-            "Any planned purchases today? Distinguish between business investment and impulse spending.",
-            "What money action advances your consultant business: expense cutting, revenue tracking, or client pricing?",
-            "Spending patterns when stressed: What's your awareness plan today?",
-            "Business expense vs. personal expense: How will you categorize today's spending?",
-            "What financial discipline supports your business building goals today?"
-        ]
-        return random.choice(prompts)
-    
-    def analyze_response(self, user_response: str) -> str:
-        response = user_response.lower()
         
-        if any(word in response for word in ["deserve", "treat myself", "just this once"]):
-            return "❌ **Impulse spending rationalization detected.** 'Deserve' is expensive. What business goal does this purchase support?"
-        
-        if any(word in response for word in ["business", "investment", "tools", "education"]):
-            return "✅ **Business investment mindset.** How will you measure ROI on this expense?"
-        
-        if any(word in response for word in ["save", "budget", "track"]):
-            return "💰 **Financial discipline engaged.** Savings create business opportunity freedom. Track the correlation."
-        
-        return f"**Financial commitment logged:** {user_response}\n\nBusiness building or consumption? Every dollar spent is a strategic choice."
-    
-    def get_intervention_message(self, pattern_data: dict) -> str:
-        return """
-💳 **Financial Discipline Alert**
-
-**Pattern Recognition:** You typically overspend when business stress increases - avoiding revenue actions while spending comfort money.
-
-**Current Trajectory:** This pattern delays business growth by 2-3 months each time it happens.
-
-**Reality:** Every dollar spent on comfort could be business investment capital.
-
-**Override Action:** Name one business expense that would generate more value than whatever you're considering buying.
-
-Money follows discipline. Discipline creates business success. Choose wisely.
-"""
+        return "**Business accountability check:** What specific business action will you commit to today?"
