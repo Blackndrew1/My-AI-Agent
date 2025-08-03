@@ -123,3 +123,60 @@ class BaseAgent(ABC):
     def get_intervention_message(self, pattern_data):
         """Generate intervention based on patterns"""
         pass
+    def start_domain_conversation(self):
+        """Start focused conversation for this domain"""
+        session_id = self.conversation_manager.start_conversation(self.user_id, self.domain)
+        initial_prompt = self.generate_daily_prompt()
+        
+        self.conversation_manager.add_message(
+            self.user_id, 'agent', initial_prompt, 'initial_prompt'
+        )
+        
+        return initial_prompt
+    
+    def process_user_response(self, user_response):
+        """Process user response with full conversation intelligence"""
+        context = self.conversation_manager.get_conversation_context(self.user_id)
+        
+        # Add user message to conversation
+        self.conversation_manager.add_message(
+            self.user_id, 'user', user_response, 'response'
+        )
+        
+        # Analyze response with context
+        analysis = self.analyze_response(user_response, context)
+        
+        # Add analysis to conversation
+        self.conversation_manager.add_message(
+            self.user_id, 'agent', analysis, 'analysis'
+        )
+        
+        # Generate follow-up if needed
+        follow_up = self.generate_follow_up(user_response, analysis)
+        
+        if follow_up:
+            self.conversation_manager.add_message(
+                self.user_id, 'agent', follow_up, 'follow_up'
+            )
+            return f"{analysis}\n\n{follow_up}"
+        else:
+            # Conversation complete, lock commitment
+            self.lock_commitment(user_response)
+            self.conversation_manager.end_conversation(self.user_id, 'committed')
+            return f"{analysis}\n\n✅ **Commitment locked and tracked.**"
+    
+    def lock_commitment(self, commitment_text):
+        """Lock in final commitment to database"""
+        import sqlite3
+        from datetime import datetime
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+        INSERT INTO daily_checkins (user_id, date, domain, commitment, completed)
+        VALUES (?, ?, ?, ?, ?)
+        ''', (self.user_id, datetime.now().date(), self.domain, commitment_text, False))
+        
+        conn.commit()
+        conn.close()

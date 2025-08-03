@@ -2,8 +2,8 @@ from .base_agent import BaseAgent
 import random
 
 class ParentingAgent(BaseAgent):
-    def __init__(self, user_id: int):
-        super().__init__("parenting", user_id)
+    def __init__(self, user_id: int, conversation_manager):
+        super().__init__("parenting", user_id, conversation_manager)
     
     def get_personality_traits(self) -> dict:
         return {
@@ -23,7 +23,7 @@ class ParentingAgent(BaseAgent):
         ]
         return random.choice(prompts)
     
-    def analyze_response(self, user_response: str) -> str:
+    def analyze_response(self, user_response: str, conversation_context=None) -> str:
         response = user_response.lower()
         
         if any(word in response for word in ["phone away", "present", "focused", "no distractions"]):
@@ -36,6 +36,76 @@ class ParentingAgent(BaseAgent):
             return "⚠️ **Conditional parenting detected.** Your son deserves certainty. What specific time commitment can you guarantee?"
         
         return f"**Parenting commitment logged:** {user_response}\n\nHow will this strengthen your relationship and his development?"
+    
+    def generate_follow_up(self, user_response: str, analysis_result: str):
+        """Generate intelligent follow-up questions"""
+        response = user_response.lower()
+        
+        # If commitment is conditional, demand specificity
+        if "conditional parenting" in analysis_result:
+            return "**Follow-up required:** Give me the specific time and activity you can guarantee, regardless of work or business demands."
+        
+        # If it's present parenting, check for obstacles
+        if "present parenting" in analysis_result:
+            return "**Timing confirmation:** What exact time, and what's your backup plan if work/business thoughts interfere?"
+        
+        # If it's active bonding, ensure consistency
+        if "active bonding" in analysis_result:
+            return "**Consistency question:** How does this become a reliable routine rather than occasional occurrence?"
+        
+        # No follow-up needed
+        return None
+    
+    def generate_crisis_prompt(self, avoidance_data):
+        """Crisis intervention based on avoidance patterns"""
+        avoided_tasks = avoidance_data.get('common_avoided_tasks', [])
+        failure_count = avoidance_data.get('failure_count', 0)
+        
+        return f"""
+🚨 **PARENTING CRISIS ALERT**
+
+**Pattern Recognition:** You've missed {failure_count} quality time commitments with your son recently.
+
+**Reality Check:** These foundational years don't come back. Work stress is stealing present-moment parenting.
+
+**The Truth:** Your business builds your future. Your parenting builds HIS future. Both require intentional attention.
+
+**Override Action:** One hour of completely present time TODAY. Phone away, work thoughts off, full engagement.
+
+What specific activity will you do with your son in the next 2 hours?
+"""
+    
+    def generate_intervention_prompt(self):
+        """Intervention for declining trend"""
+        insights = self.get_predictive_insights()
+        insight_text = "\n".join(insights) if insights else ""
+        
+        return f"""
+⚠️ **PARENTING ATTENTION DECLINING**
+
+**Pattern Alert:** Your quality time consistency is dropping. This affects your relationship foundation.
+
+**Predictive Analysis:**
+{insight_text}
+
+**Course Correction:** What specific father-son activity will you commit to RIGHT NOW to reverse this trend?
+"""
+    
+    def generate_momentum_prompt(self):
+        """Capitalize on positive momentum"""
+        insights = self.get_predictive_insights()
+        insight_text = "\n".join(insights) if insights else ""
+        
+        return f"""
+👨‍👦 **PARENTING EXCELLENCE MOMENTUM**
+
+**Pattern Recognition:** You're consistently delivering quality time. Your son is benefiting from your attention.
+
+**Success Analysis:**
+{insight_text}
+
+**Momentum Question:** What deeper father-son experience will you create today while your parenting consistency is strong?
+"""
     
     def get_intervention_message(self, pattern_data: dict) -> str:
         return """
@@ -50,110 +120,4 @@ class ParentingAgent(BaseAgent):
 **Action Required:** One hour of completely present time today. Phone away, work thoughts off, full engagement.
 
 Your business builds your future. Your parenting builds his future. Both require intentional attention.
-"""
-
-class WorkAgent(BaseAgent):
-    def __init__(self, user_id: int):
-        super().__init__("work", user_id)
-    
-    def get_personality_traits(self) -> dict:
-        return {
-            "tone": "efficiency_focused",
-            "focus": "automation_opportunities",
-            "accountability_level": "strategic", 
-            "motivation_style": "time_liberation"
-        }
-    
-    def generate_daily_prompt(self) -> str:
-        prompts = [
-            "What repetitive customer support task will you automate today?",
-            "Which administrative process can be streamlined or eliminated?", 
-            "Email templates, report automation, or workflow optimization - pick one to implement.",
-            "What manual task takes 30+ minutes that could be reduced to 5 minutes?",
-            "How will you demonstrate automation expertise that impresses colleagues?"
-        ]
-        return random.choice(prompts)
-    
-    def analyze_response(self, user_response: str) -> str:
-        response = user_response.lower()
-        
-        if any(word in response for word in ["automate", "template", "script", "system"]):
-            return "🤖 **Automation mindset activated.** This saves time AND builds your AI expertise portfolio. Implementation timeline?"
-        
-        if any(word in response for word in ["email", "report", "process", "workflow"]):
-            return "⚡ **Efficiency target identified.** Time saved here = more business development opportunity. Quantify the impact."
-        
-        if any(word in response for word in ["nothing", "can't", "no time"]):
-            return "❌ **Automation avoidance.** You're in customer support - there are dozens of automation opportunities. Pick the easiest one."
-        
-        return f"**Work automation commitment logged:** {user_response}\n\nHow will this demonstration of efficiency build your consultant reputation?"
-    
-    def get_intervention_message(self, pattern_data: dict) -> str:
-        return """
-💼 **Work Efficiency Alert**
-
-**Current Status:** You're stuck in manual task loops that prevent business development time.
-
-**Opportunity Cost:** Every hour spent on routine work tasks is an hour not building your consultant business.
-
-**Skill Building:** Automation implementations become portfolio pieces for client presentations.
-
-**Action Required:** Identify ONE 15-minute task you do repeatedly. Spend 1 hour automating it this week.
-
-**ROI:** 1 hour investment saves 5+ hours monthly + demonstrates expertise to potential clients.
-
-Stop being busy. Start being efficient. Your business depends on this transition.
-"""
-
-class PersonalAgent(BaseAgent):
-    def __init__(self, user_id: int):
-        super().__init__("personal", user_id)
-    
-    def get_personality_traits(self) -> dict:
-        return {
-            "tone": "balanced_and_wise",
-            "focus": "sustainable_performance",
-            "accountability_level": "supportive_firm",
-            "motivation_style": "long_term_optimization"
-        }
-    
-    def generate_daily_prompt(self) -> str:
-        prompts = [
-            "Gaming, movie, or social time: What recharge activity optimizes tomorrow's performance?",
-            "Beach, pool, or leisure plans: How will you enjoy life while maintaining momentum?",
-            "Personal time balance: Enough to recharge, not so much you lose drive?", 
-            "What guilt-free activity will restore your energy for business and family demands?",
-            "Social connections or solo recharge: What does your energy level need today?"
-        ]
-        return random.choice(prompts)
-    
-    def analyze_response(self, user_response: str) -> str:
-        response = user_response.lower()
-        
-        if any(word in response for word in ["balance", "recharge", "restore", "energy"]):
-            return "⚖️ **Strategic rest identified.** Recovery enables peak performance. Duration limits planned?"
-        
-        if any(word in response for word in ["gaming", "movie", "beach", "pool"]):
-            return "🎮 **Specific leisure activity.** Enjoyment is productivity fuel. How will you prevent this from becoming escapism?"
-        
-        if any(word in response for word in ["social", "friends", "family", "connection"]):
-            return "👥 **Social recharge selected.** Human connection enhances all life domains. Quality over quantity."
-        
-        return f"**Personal time commitment logged:** {user_response}\n\nHow will this leisure time enhance your business and family performance?"
-    
-    def get_intervention_message(self, pattern_data: dict) -> str:
-        return """
-🎯 **Personal Balance Alert**
-
-**Pattern Detection:** You're either working too much (burnout risk) or recharging too much (momentum loss).
-
-**Optimal State:** Strategic rest that restores energy without killing drive.
-
-**Current Need:** Based on your recent pattern, you need [more focused rest / less escape time].
-
-**Balance Principle:** Personal time should make you excited to return to business and family, not avoid them.
-
-**Calibration:** 60-90 minutes of quality leisure that leaves you refreshed, not dulled.
-
-Your personal time quality directly affects your business and parenting performance. Choose wisely.
 """
