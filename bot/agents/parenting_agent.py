@@ -2,7 +2,7 @@ from .base_agent import BaseAgent
 import random
 
 class ParentingAgent(BaseAgent):
-    def __init__(self, user_id: int, conversation_manager):
+    def __init__(self, user_id: int, conversation_manager=None):
         super().__init__("parenting", user_id, conversation_manager)
     
     def get_personality_traits(self) -> dict:
@@ -21,6 +21,18 @@ class ParentingAgent(BaseAgent):
             "Weekend family activity ideas: What memory will you create this week?",
             "Gaming balance: How will you enjoy video games together without excess?"
         ]
+        return random.choice(prompts)
+    
+    def generate_base_prompt(self):
+        """Generate base prompt without pattern checking - prevents recursion"""
+        prompts = [
+            "What specific quality time will you have with your son today? Phone away, fully present.",
+            "Basketball season starts Aug 11 - how will you prepare for gym time together?",
+            "Dinner engagement plan: What will you discuss with your son tonight?",
+            "Weekend family activity ideas: What memory will you create this week?",
+            "Gaming balance: How will you enjoy video games together without excess?"
+        ]
+        import random
         return random.choice(prompts)
     
     def analyze_response(self, user_response: str, conversation_context=None) -> str:

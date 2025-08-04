@@ -2,7 +2,7 @@ from .base_agent import BaseAgent
 import random
 
 class FinanceAgent(BaseAgent):
-    def __init__(self, user_id, conversation_manager):
+    def __init__(self, user_id, conversation_manager=None):
         super().__init__("finance", user_id, conversation_manager)
     
     def get_personality_traits(self):
@@ -22,6 +22,18 @@ class FinanceAgent(BaseAgent):
             "Business expense vs. personal expense: How will you categorize today's spending?",
             "What financial discipline supports your business building goals today?"
         ]
+        return random.choice(prompts)
+    
+    def generate_base_prompt(self):
+        """Generate base prompt without pattern checking - prevents recursion"""
+        prompts = [
+            "Any planned purchases today? Distinguish between business investment and impulse spending.",
+            "What money action advances your consultant business: expense cutting, revenue tracking, or client pricing?",
+            "Spending patterns when stressed: What's your awareness plan today?",
+            "Business expense vs. personal expense: How will you categorize today's spending?",
+            "What financial discipline supports your business building goals today?"
+        ]
+        import random
         return random.choice(prompts)
     
     def generate_crisis_prompt(self, avoidance_data):

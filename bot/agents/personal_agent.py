@@ -2,7 +2,7 @@ from .base_agent import BaseAgent
 import random
 
 class PersonalAgent(BaseAgent):
-    def __init__(self, user_id, conversation_manager):
+    def __init__(self, user_id, conversation_manager=None):
         super().__init__("personal", user_id, conversation_manager)
     
     def get_personality_traits(self):
@@ -22,6 +22,18 @@ class PersonalAgent(BaseAgent):
             "Personal time balance: Enough to recharge, not so much you lose drive?",
             "What activity will genuinely restore your capacity for challenges?"
         ]
+        return random.choice(prompts)
+    
+    def generate_base_prompt(self):
+        """Generate base prompt without pattern checking - prevents recursion"""
+        prompts = [
+            "Gaming, movie, or social time: What recharge activity optimizes tomorrow's performance?",
+            "Beach, pool, or leisure plans: How will you enjoy life while maintaining momentum?",
+            "Personal time balance: Enough to recharge, not so much you lose drive?",
+            "What guilt-free activity will restore your energy for business and family demands?",
+            "Social connections or solo recharge: What does your energy level need today?"
+        ]
+        import random
         return random.choice(prompts)
     
     def generate_crisis_prompt(self, avoidance_data):

@@ -2,7 +2,7 @@ from .base_agent import BaseAgent
 import random
 
 class HealthAgent(BaseAgent):
-    def __init__(self, user_id, conversation_manager):
+    def __init__(self, user_id, conversation_manager=None):
         super().__init__("health", user_id, conversation_manager)
     
     def get_personality_traits(self):
@@ -12,9 +12,13 @@ class HealthAgent(BaseAgent):
             "accountability_level": "firm_but_supportive",
             "motivation_style": "performance_correlation"
         }
-    
+   
     def generate_daily_prompt(self):
-        """Simple daily prompt without pattern recursion"""
+        """Use pattern-based prompting"""
+        return self.get_pattern_based_prompt()
+    
+    def generate_base_prompt(self):
+        """Generate base prompt without pattern checking - prevents recursion"""
         prompts = [
             "What's your physical activity plan today? (Morning workout, gym with son, or active recovery)",
             "Your body is your business foundation. What's today's energy investment?",

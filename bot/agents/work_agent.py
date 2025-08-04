@@ -2,7 +2,7 @@ from .base_agent import BaseAgent
 import random
 
 class WorkAgent(BaseAgent):
-    def __init__(self, user_id, conversation_manager):
+    def __init__(self, user_id, conversation_manager=None):
         super().__init__("work", user_id, conversation_manager)
     
     def get_personality_traits(self):
@@ -22,6 +22,18 @@ class WorkAgent(BaseAgent):
             "What manual task takes 30+ minutes that could be reduced to 5 minutes?",
             "How will you demonstrate automation expertise that builds your consultant portfolio?"
         ]
+        return random.choice(prompts)
+    
+    def generate_base_prompt(self):
+        """Generate base prompt without pattern checking - prevents recursion"""
+        prompts = [
+            "What repetitive customer support task will you automate today?",
+            "Which administrative process can be streamlined or eliminated?",
+            "Email templates, report automation, or workflow optimization - pick one to implement.",
+            "What manual task takes 30+ minutes that could be reduced to 5 minutes?",
+            "How will you demonstrate automation expertise that impresses colleagues?"
+        ]
+        import random
         return random.choice(prompts)
     
     def generate_crisis_prompt(self, avoidance_data):
